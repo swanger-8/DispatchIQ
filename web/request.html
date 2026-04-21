@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Request Service</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0B0B10;
+      --surface: #15151D;
+      --surface-high: #1E1E2A;
+      --border: rgba(255,255,255,0.10);
+      --border-mid: rgba(255,255,255,0.18);
+      --text: #EEEEF3;
+      --text-sec: rgba(238,238,243,0.55);
+      --text-ter: rgba(238,238,243,0.32);
+      --blue: #5080FF;
+      --blue-alpha: rgba(80,128,255,0.18);
+      --green: #2ECC7C;
+      --green-alpha: rgba(46,204,124,0.18);
+      --red: #FF5252;
+      --amber: #F5A020;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #F0F0F7;
+        --surface: #FFFFFF;
+        --surface-high: #EBEBF2;
+        --border: rgba(0,0,0,0.11);
+        --border-mid: rgba(0,0,0,0.18);
+        --text: #1C1C1E;
+        --text-sec: rgba(28,28,30,0.58);
+        --text-ter: rgba(28,28,30,0.42);
+        --blue: #1C64D6;
+        --blue-alpha: rgba(28,100,214,0.12);
+        --green: #18A05E;
+        --green-alpha: rgba(24,160,94,0.12);
+        --red: #D43A3A;
+        --amber: #D28000;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: env(safe-area-inset-bottom, 24px);
+    }
+
+    /* ── Header ── */
+    .header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .contractor-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--blue-alpha);
+      border: 1px solid rgba(80,128,255,0.3);
+      border-radius: 100px;
+      padding: 5px 12px 5px 8px;
+      margin-bottom: 10px;
+    }
+
+    .contractor-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .contractor-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--blue);
+      letter-spacing: 0.2px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.4px;
+      line-height: 1.2;
+    }
+
+    .header p {
+      font-size: 13px;
+      color: var(--text-sec);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    /* ── Error / loading states ── */
+    .state-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 32px 24px;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .state-icon {
+      font-size: 48px;
+      line-height: 1;
+    }
+
+    .state-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+
+    .state-body {
+      font-size: 14px;
+      color: var(--text-sec);
+      line-height: 1.6;
+      max-width: 300px;
+    }
+
+    /* ── Form ── */
+    .form-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
+
+    .field-group {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-ter);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sec);
+    }
+
+    input, textarea {
+      background: var(--surface-high);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 15px;
+      padding: 11px 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-ter);
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--blue);
+    }
+
+    textarea {
+      resize: none;
+      min-height: 100px;
+      line-height: 1.5;
+      padding-top: 11px;
+    }
+
+    /* ── Photos ── */
+    .photo-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .photo-thumb-wrap {
+      position: relative;
+      width: 80px;
+      height: 80px;
+    }
+
+    .photo-thumb {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      background: var(--surface-high);
+      display: block;
+    }
+
+    .photo-remove {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--red);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      line-height: 1;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .photo-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .photo-btn {
+      flex: 1;
+      height: 46px;
+      background: var(--surface-high);
+      border: 1px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      -webkit-appearance: none;
+      transition: opacity 0.15s;
+    }
+
+    .photo-btn:active { opacity: 0.7; }
+
+    #file-input { display: none; }
+
+    /* ── Submit ── */
+    .submit-btn {
+      width: 100%;
+      height: 52px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      letter-spacing: -0.2px;
+      -webkit-appearance: none;
+      transition: opacity 0.15s;
+    }
+
+    .submit-btn:active { opacity: 0.85; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Progress bar ── */
+    .progress-bar-wrap {
+      height: 3px;
+      background: var(--surface-high);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .progress-label {
+      font-size: 12px;
+      color: var(--text-sec);
+      text-align: center;
+    }
+
+    /* ── Success ── */
+    #success-screen .state-icon { color: var(--green); }
+
+    .success-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      margin-top: 8px;
+      text-align: left;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .success-card-row {
+      font-size: 13px;
+      color: var(--text-sec);
+      line-height: 1.6;
+    }
+
+    .success-card-row strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header (always visible) -->
+  <div class="header" id="page-header" style="display:none">
+    <div class="contractor-badge">
+      <div class="contractor-dot"></div>
+      <span class="contractor-name" id="contractor-display-name">Loading…</span>
+    </div>
+    <h1>Request Service</h1>
+    <p>Fill in your details and we'll be in touch shortly.</p>
+  </div>
+
+  <!-- Loading -->
+  <div class="state-screen" id="loading-screen">
+    <div class="state-icon">⏳</div>
+    <div class="state-title">Loading…</div>
+  </div>
+
+  <!-- Error (bad contractor ID) -->
+  <div class="state-screen" id="error-screen" style="display:none">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">Link not valid</div>
+    <div class="state-body">This request link is invalid or has expired. Please ask your contractor to share the link again.</div>
+  </div>
+
+  <!-- Form -->
+  <div id="form-screen" style="display:none">
+    <form class="form-body" id="request-form" novalidate>
+
+      <div class="field-group">
+        <div class="section-label">Your Information</div>
+
+        <div class="field">
+          <label for="customer-name">Full Name *</label>
+          <input id="customer-name" type="text" placeholder="Jane Smith" autocomplete="name" required />
+        </div>
+
+        <div class="field">
+          <label for="customer-phone">Phone Number</label>
+          <input id="customer-phone" type="tel" placeholder="(555) 000-0000" autocomplete="tel" />
+        </div>
+
+        <div class="field" style="margin-bottom:0">
+          <label for="customer-email">Email Address</label>
+          <input id="customer-email" type="email" placeholder="jane@example.com" autocomplete="email" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="section-label">Service Location</div>
+        <div class="field" style="margin-bottom:0">
+          <label for="customer-address">Service Address *</label>
+          <input id="customer-address" type="text" placeholder="123 Main St, City, State ZIP" autocomplete="street-address" required />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="section-label">Issue Description</div>
+        <div class="field" style="margin-bottom:0">
+          <label for="customer-description">Describe the Problem *</label>
+          <textarea id="customer-description" placeholder="What needs to be fixed or serviced? Include any relevant details." rows="5" required></textarea>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="section-label" id="photos-label">Photos — optional</div>
+
+        <div class="photo-grid" id="photo-grid"></div>
+
+        <div class="photo-buttons">
+          <button type="button" class="photo-btn" id="camera-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            Camera
+          </button>
+          <button type="button" class="photo-btn" id="library-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            Library
+          </button>
+        </div>
+        <input type="file" id="file-input" accept="image/*" multiple />
+      </div>
+
+      <div id="progress-wrap" style="display:none">
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+        <div class="progress-label" id="progress-label">Uploading photos…</div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">Submit Request</button>
+
+    </form>
+  </div>
+
+  <!-- Success -->
+  <div class="state-screen" id="success-screen" style="display:none">
+    <div class="state-icon">✅</div>
+    <div class="state-title">Request Sent!</div>
+    <div class="state-body">Your service request has been submitted. The contractor will review it and be in touch shortly.</div>
+    <div class="success-card" id="success-summary"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://czsedsxdyssizkecjxur.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_f11MMrlPUzwDM60y9qm0nw_UhtdbRH-';
+    const PHOTO_BUCKET = 'request-photos';
+
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ── URL param ──────────────────────────────────────────────────────────────
+
+    const params = new URLSearchParams(window.location.search);
+    const contractorId = params.get('contractor');
+
+    // ── DOM refs ───────────────────────────────────────────────────────────────
+
+    const $loading = document.getElementById('loading-screen');
+    const $error   = document.getElementById('error-screen');
+    const $form    = document.getElementById('form-screen');
+    const $success = document.getElementById('success-screen');
+    const $header  = document.getElementById('page-header');
+
+    function show(el) {
+      [$loading, $error, $form, $success].forEach(e => e.style.display = 'none');
+      el.style.display = '';
+    }
+
+    // ── Validate contractor ────────────────────────────────────────────────────
+
+    async function init() {
+      if (!contractorId) { show($error); return; }
+
+      const { data, error } = await db
+        .from('contractor_profiles')
+        .select('display_name')
+        .eq('user_id', contractorId)
+        .single();
+
+      if (error || !data) { show($error); return; }
+
+      document.getElementById('contractor-display-name').textContent = data.display_name || 'Your Contractor';
+      document.title = `Request Service · ${data.display_name || 'DispatchIQ'}`;
+      $header.style.display = '';
+      show($form);
+    }
+
+    init();
+
+    // ── Photo handling ─────────────────────────────────────────────────────────
+
+    const pendingPhotos = []; // { id, file, objectUrl }
+
+    const $grid        = document.getElementById('photo-grid');
+    const $photosLabel = document.getElementById('photos-label');
+    const $fileInput   = document.getElementById('file-input');
+    const $cameraBtn   = document.getElementById('camera-btn');
+    const $libraryBtn  = document.getElementById('library-btn');
+
+    $cameraBtn.addEventListener('click', () => {
+      $fileInput.setAttribute('capture', 'environment');
+      $fileInput.click();
+    });
+
+    $libraryBtn.addEventListener('click', () => {
+      $fileInput.removeAttribute('capture');
+      $fileInput.click();
+    });
+
+    $fileInput.addEventListener('change', () => {
+      Array.from($fileInput.files).forEach(addPhoto);
+      $fileInput.value = '';
+    });
+
+    function addPhoto(file) {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const objectUrl = URL.createObjectURL(file);
+      pendingPhotos.push({ id, file, objectUrl });
+      renderGrid();
+    }
+
+    function removePhoto(id) {
+      const idx = pendingPhotos.findIndex(p => p.id === id);
+      if (idx !== -1) {
+        URL.revokeObjectURL(pendingPhotos[idx].objectUrl);
+        pendingPhotos.splice(idx, 1);
+      }
+      renderGrid();
+    }
+
+    function renderGrid() {
+      $grid.innerHTML = '';
+      pendingPhotos.forEach(p => {
+        const wrap = document.createElement('div');
+        wrap.className = 'photo-thumb-wrap';
+
+        const img = document.createElement('img');
+        img.className = 'photo-thumb';
+        img.src = p.objectUrl;
+        img.alt = '';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'photo-remove';
+        btn.textContent = '×';
+        btn.addEventListener('click', () => removePhoto(p.id));
+
+        wrap.appendChild(img);
+        wrap.appendChild(btn);
+        $grid.appendChild(wrap);
+      });
+
+      $grid.style.display = pendingPhotos.length ? 'flex' : 'none';
+      $photosLabel.textContent = pendingPhotos.length > 0
+        ? `Photos (${pendingPhotos.length})`
+        : 'Photos — optional';
+    }
+
+    renderGrid();
+
+    // ── Upload a single photo ──────────────────────────────────────────────────
+
+    async function uploadPhoto(file, requestId) {
+      const rawExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const safeExt = ['jpg','jpeg','png','heic','webp'].includes(rawExt) ? rawExt : 'jpg';
+      const contentType = safeExt === 'png' ? 'image/png' : 'image/jpeg';
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+      const storagePath = `${contractorId}/requests/${requestId}/${filename}`;
+
+      const { error } = await db.storage
+        .from(PHOTO_BUCKET)
+        .upload(storagePath, file, { contentType, upsert: false });
+
+      if (error) {
+        console.warn('[request.html] Photo upload failed:', error.message);
+        return null;
+      }
+
+      const { data: { publicUrl } } = db.storage
+        .from(PHOTO_BUCKET)
+        .getPublicUrl(storagePath);
+
+      return publicUrl;
+    }
+
+    // ── Submit ─────────────────────────────────────────────────────────────────
+
+    const $submitBtn    = document.getElementById('submit-btn');
+    const $progressWrap = document.getElementById('progress-wrap');
+    const $progressBar  = document.getElementById('progress-bar');
+    const $progressLabel= document.getElementById('progress-label');
+
+    document.getElementById('request-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const customerName  = document.getElementById('customer-name').value.trim();
+      const phone         = document.getElementById('customer-phone').value.trim();
+      const email         = document.getElementById('customer-email').value.trim();
+      const address       = document.getElementById('customer-address').value.trim();
+      const description   = document.getElementById('customer-description').value.trim();
+
+      if (!customerName) { alert('Please enter your full name.'); return; }
+      if (!address)       { alert('Please enter the service address.'); return; }
+      if (!description)   { alert('Please describe the issue.'); return; }
+
+      $submitBtn.disabled = true;
+      $submitBtn.textContent = 'Submitting…';
+
+      // Pre-generate UUID client-side so we can use it for photo paths before
+      // inserting. Avoids needing .select() or UPDATE — anon has neither policy.
+      const requestId = crypto.randomUUID();
+
+      // 1. Upload photos first (storage only, no DB write)
+      let photoPaths = [];
+      if (pendingPhotos.length > 0) {
+        $progressWrap.style.display = '';
+        const total = pendingPhotos.length;
+        let done = 0;
+
+        for (const p of pendingPhotos) {
+          $progressLabel.textContent = `Uploading photo ${done + 1} of ${total}…`;
+          $progressBar.style.width = `${(done / total) * 100}%`;
+          const url = await uploadPhoto(p.file, requestId);
+          if (url) photoPaths.push(url);
+          done++;
+        }
+
+        $progressBar.style.width = '95%';
+        $progressLabel.textContent = 'Finishing up…';
+      }
+
+      // 2. Single INSERT with all photo URLs already populated — no UPDATE needed
+      const { error: insertError } = await db
+        .from('job_requests')
+        .insert({
+          id:             requestId,
+          contractor_id:  contractorId,
+          customer_name:  customerName,
+          customer_phone: phone || null,
+          customer_email: email || null,
+          address,
+          description,
+          photo_paths:    photoPaths,
+        });
+
+      if (insertError) {
+        $progressWrap.style.display = 'none';
+        alert('Failed to submit: ' + insertError.message);
+        $submitBtn.disabled = false;
+        $submitBtn.textContent = 'Submit Request';
+        return;
+      }
+
+      // 3. Show success
+      const summaryEl = document.getElementById('success-summary');
+      summaryEl.innerHTML = `
+        <div class="success-card-row"><strong>${customerName}</strong></div>
+        ${phone    ? `<div class="success-card-row">${phone}</div>`  : ''}
+        ${email    ? `<div class="success-card-row">${email}</div>`  : ''}
+        <div class="success-card-row" style="margin-top:6px;color:var(--text-sec)">${address}</div>
+      `;
+
+      $header.style.display = 'none';
+      show($success);
+    });
+  </script>
+</body>
+</html>
