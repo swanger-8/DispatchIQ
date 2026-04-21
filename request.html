@@ -54,7 +54,6 @@
       padding-bottom: env(safe-area-inset-bottom, 24px);
     }
 
-    /* ── Header ── */
     .header {
       padding: 20px 20px 16px;
       border-bottom: 1px solid var(--border);
@@ -76,7 +75,8 @@
     }
 
     .contractor-dot {
-      width: 8px; height: 8px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: var(--blue);
       flex-shrink: 0;
@@ -104,7 +104,6 @@
       line-height: 1.5;
     }
 
-    /* ── Error / loading states ── */
     .state-screen {
       display: flex;
       flex-direction: column;
@@ -135,7 +134,6 @@
       max-width: 300px;
     }
 
-    /* ── Form ── */
     .form-body {
       padding: 20px;
       display: flex;
@@ -208,7 +206,6 @@
       padding-top: 11px;
     }
 
-    /* ── Photos ── */
     .photo-grid {
       display: flex;
       flex-wrap: wrap;
@@ -278,7 +275,6 @@
 
     #file-input { display: none; }
 
-    /* ── Submit ── */
     .submit-btn {
       width: 100%;
       height: 52px;
@@ -298,7 +294,6 @@
     .submit-btn:active { opacity: 0.85; }
     .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* ── Progress bar ── */
     .progress-bar-wrap {
       height: 3px;
       background: var(--surface-high);
@@ -321,7 +316,6 @@
       text-align: center;
     }
 
-    /* ── Success ── */
     #success-screen .state-icon { color: var(--green); }
 
     .success-card {
@@ -349,7 +343,6 @@
 </head>
 <body>
 
-  <!-- Header (always visible) -->
   <div class="header" id="page-header" style="display:none">
     <div class="contractor-badge">
       <div class="contractor-dot"></div>
@@ -359,20 +352,17 @@
     <p>Fill in your details and we'll be in touch shortly.</p>
   </div>
 
-  <!-- Loading -->
   <div class="state-screen" id="loading-screen">
     <div class="state-icon">⏳</div>
     <div class="state-title">Loading…</div>
   </div>
 
-  <!-- Error (bad contractor ID) -->
   <div class="state-screen" id="error-screen" style="display:none">
     <div class="state-icon">⚠️</div>
     <div class="state-title">Link not valid</div>
     <div class="state-body">This request link is invalid or has expired. Please ask your contractor to share the link again.</div>
   </div>
 
-  <!-- Form -->
   <div id="form-screen" style="display:none">
     <form class="form-body" id="request-form" novalidate>
 
@@ -446,7 +436,6 @@
     </form>
   </div>
 
-  <!-- Success -->
   <div class="state-screen" id="success-screen" style="display:none">
     <div class="state-icon">✅</div>
     <div class="state-title">Request Sent!</div>
@@ -460,15 +449,15 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_f11MMrlPUzwDM60y9qm0nw_UhtdbRH-';
     const PHOTO_BUCKET = 'request-photos';
 
+    // Fallback contractor for plain public link:
+    const DEFAULT_CONTRACTOR_ID = 'e1e72578-0816-4401-b0d7-12e7d8951100';
+
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ── URL param ──────────────────────────────────────────────────────────────
-
     const params = new URLSearchParams(window.location.search);
     const contractorId = params.get('contractor');
-
-    // ── DOM refs ───────────────────────────────────────────────────────────────
+    const effectiveContractorId = contractorId || DEFAULT_CONTRACTOR_ID;
 
     const $loading = document.getElementById('loading-screen');
     const $error   = document.getElementById('error-screen');
@@ -481,20 +470,21 @@
       el.style.display = '';
     }
 
-    // ── Validate contractor ────────────────────────────────────────────────────
-
     async function init() {
-      if (!contractorId) { show($error); return; }
-
       const { data, error } = await db
         .from('contractor_profiles')
         .select('display_name')
-        .eq('user_id', contractorId)
+        .eq('user_id', effectiveContractorId)
         .single();
 
-      if (error || !data) { show($error); return; }
+      if (error || !data) {
+        show($error);
+        return;
+      }
 
-      document.getElementById('contractor-display-name').textContent = data.display_name || 'Your Contractor';
+      document.getElementById('contractor-display-name').textContent =
+        data.display_name || 'DispatchIQ';
+
       document.title = `Request Service · ${data.display_name || 'DispatchIQ'}`;
       $header.style.display = '';
       show($form);
@@ -502,9 +492,7 @@
 
     init();
 
-    // ── Photo handling ─────────────────────────────────────────────────────────
-
-    const pendingPhotos = []; // { id, file, objectUrl }
+    const pendingPhotos = [];
 
     const $grid        = document.getElementById('photo-grid');
     const $photosLabel = document.getElementById('photos-label');
@@ -573,14 +561,12 @@
 
     renderGrid();
 
-    // ── Upload a single photo ──────────────────────────────────────────────────
-
     async function uploadPhoto(file, requestId) {
       const rawExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
       const safeExt = ['jpg','jpeg','png','heic','webp'].includes(rawExt) ? rawExt : 'jpg';
       const contentType = safeExt === 'png' ? 'image/png' : 'image/jpeg';
       const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
-      const storagePath = `${contractorId}/requests/${requestId}/${filename}`;
+      const storagePath = `${effectiveContractorId}/requests/${requestId}/${filename}`;
 
       const { error } = await db.storage
         .from(PHOTO_BUCKET)
@@ -598,34 +584,29 @@
       return publicUrl;
     }
 
-    // ── Submit ─────────────────────────────────────────────────────────────────
-
-    const $submitBtn    = document.getElementById('submit-btn');
-    const $progressWrap = document.getElementById('progress-wrap');
-    const $progressBar  = document.getElementById('progress-bar');
-    const $progressLabel= document.getElementById('progress-label');
+    const $submitBtn     = document.getElementById('submit-btn');
+    const $progressWrap  = document.getElementById('progress-wrap');
+    const $progressBar   = document.getElementById('progress-bar');
+    const $progressLabel = document.getElementById('progress-label');
 
     document.getElementById('request-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const customerName  = document.getElementById('customer-name').value.trim();
-      const phone         = document.getElementById('customer-phone').value.trim();
-      const email         = document.getElementById('customer-email').value.trim();
-      const address       = document.getElementById('customer-address').value.trim();
-      const description   = document.getElementById('customer-description').value.trim();
+      const customerName = document.getElementById('customer-name').value.trim();
+      const phone        = document.getElementById('customer-phone').value.trim();
+      const email        = document.getElementById('customer-email').value.trim();
+      const address      = document.getElementById('customer-address').value.trim();
+      const description  = document.getElementById('customer-description').value.trim();
 
       if (!customerName) { alert('Please enter your full name.'); return; }
-      if (!address)       { alert('Please enter the service address.'); return; }
-      if (!description)   { alert('Please describe the issue.'); return; }
+      if (!address) { alert('Please enter the service address.'); return; }
+      if (!description) { alert('Please describe the issue.'); return; }
 
       $submitBtn.disabled = true;
       $submitBtn.textContent = 'Submitting…';
 
-      // Pre-generate UUID client-side so we can use it for photo paths before
-      // inserting. Avoids needing .select() or UPDATE — anon has neither policy.
       const requestId = crypto.randomUUID();
 
-      // 1. Upload photos first (storage only, no DB write)
       let photoPaths = [];
       if (pendingPhotos.length > 0) {
         $progressWrap.style.display = '';
@@ -644,18 +625,17 @@
         $progressLabel.textContent = 'Finishing up…';
       }
 
-      // 2. Single INSERT with all photo URLs already populated — no UPDATE needed
       const { error: insertError } = await db
         .from('job_requests')
         .insert({
-          id:             requestId,
-          contractor_id:  contractorId,
-          customer_name:  customerName,
+          id: requestId,
+          contractor_id: effectiveContractorId,
+          customer_name: customerName,
           customer_phone: phone || null,
           customer_email: email || null,
           address,
           description,
-          photo_paths:    photoPaths,
+          photo_paths: photoPaths,
         });
 
       if (insertError) {
@@ -666,12 +646,11 @@
         return;
       }
 
-      // 3. Show success
       const summaryEl = document.getElementById('success-summary');
       summaryEl.innerHTML = `
         <div class="success-card-row"><strong>${customerName}</strong></div>
-        ${phone    ? `<div class="success-card-row">${phone}</div>`  : ''}
-        ${email    ? `<div class="success-card-row">${email}</div>`  : ''}
+        ${phone ? `<div class="success-card-row">${phone}</div>` : ''}
+        ${email ? `<div class="success-card-row">${email}</div>` : ''}
         <div class="success-card-row" style="margin-top:6px;color:var(--text-sec)">${address}</div>
       `;
 
